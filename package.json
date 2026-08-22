@@ -1,0 +1,11 @@
+{
+  "name": "lss-system-cloudflare",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@simplewebauthn/server": "13.3.2"
+  },
+  "devDependencies": {
+    "wrangler": "4.125.0"
+  }
+}
