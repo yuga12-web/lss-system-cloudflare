@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020812">
+
+<title>LIFE STATUS SYSTEM</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+html,body{
+  margin:0;
+  min-height:100%;
+  background:#020812;
+  color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button{
+  font:inherit;
+}
+
+.screen{
+  min-height:100svh;
+  display:none;
+  position:relative;
+  overflow:hidden;
+}
+
+.screen.active{
+  display:flex;
+}
+
+.center{
+  width:min(100%,520px);
+  margin:auto;
+  padding:48px 28px;
+  text-align:center;
+}
+
+/* =========================
+   LOCK SCREEN
+========================= */
+
+.lock{
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      #063d78 0,
+      #031a35 25%,
+      #020812 62%,
+      #000 100%
+    );
+}
+
+.eyebrow{
+  letter-spacing:.45em;
+  font-size:13px;
+  color:#9fb4d0;
+  margin-bottom:28px;
+}
+
+.logo{
+  font-size:76px;
+  font-weight:800;
+  letter-spacing:.22em;
+  margin-right:-.22em;
+  text-shadow:0 0 18px #168cff;
+}
+
+.state{
+  letter-spacing:.28em;
+  color:#a7b9d3;
+  margin:18px 0 48px;
+}
+
+.orb{
+  width:180px;
+  height:180px;
+  margin:0 auto 42px;
+  border-radius:38%;
+  transform:rotate(45deg);
+  background:linear-gradient(135deg,#1598ff,#07346c);
+  box-shadow:0 0 42px #087fff;
+  border:1px solid #33a7ff;
+}
+
+.title{
+  font-size:30px;
+  letter-spacing:.12em;
+  font-weight:800;
+}
+
+.sub{
+  color:#a9bad2;
+  margin:16px 0 36px;
+}
+
+.primary{
+  width:100%;
+  border:1px solid #4eb0ff;
+  border-radius:22px;
+  padding:18px;
+  background:linear-gradient(#259cff,#0874e8);
+  color:#fff;
+  font-size:20px;
+  font-weight:800;
+  box-shadow:0 0 20px #006dd866;
+}
+
+/* =========================
+   FACE ID SCREEN
+========================= */
+
+.face{
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      #062c59,
+      #020812 60%,
+      #000
+    );
+}
+
+.faceIcon{
+  width:160px;
+  height:160px;
+  border:2px solid #32a7ff;
+  border-radius:34px;
+  margin:40px auto 35px;
+  display:grid;
+  place-items:center;
+  box-shadow:0 0 35px #087fff66;
+}
+
+.faceIcon span{
+  font-size:72px;
+}
+
+.message{
+  min-height:30px;
+  margin-top:22px;
+  color:#9fb4d0;
+}
+
+/* =========================
+   ACCESS GRANTED
+========================= */
+
+.granted{
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      #063d78,
+      #020812 60%,
+      #000
+    );
+}
+
+.check{
+  font-size:90px;
+  color:#52efb0;
+  margin:45px 0 25px;
+  text-shadow:0 0 28px #20d994;
+}
+
+/* =========================
+   HOME
+========================= */
+
+.home{
+  background:#000;
+  align-items:stretch;
+  justify-content:center;
+}
+
+.home img{
+  display:block;
+  width:100%;
+  min-height:100svh;
+  object-fit:cover;
+  object-position:top center;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ======================
+     LOCK
+====================== -->
+
+<section id="lock" class="screen lock active">
+
+  <div class="center">
+
+    <div class="eyebrow">
+      LIFE STATUS SYSTEM
+    </div>
+
+    <div class="logo">
+      LSS
+    </div>
+
+    <div class="state">
+      SYSTEM : LOCKED ●
+    </div>
+
+    <div class="orb"></div>
+
+    <div class="title">
+      SYSTEM LOCKED
+    </div>
+
+    <div class="sub">
+      本人認証が必要です
+    </div>
+
+    <button
+      class="primary"
+      onclick="showScreen('face')"
+    >
+      認証して開く
+    </button>
+
+  </div>
+
+</section>
+
+
+<!-- ======================
+     FACE ID
+====================== -->
+
+<section id="face" class="screen face">
+
+  <div class="center">
+
+    <div class="eyebrow">
+      LIFE STATUS SYSTEM
+    </div>
+
+    <div class="logo">
+      LSS
+    </div>
+
+    <div class="state">
+      IDENTITY VERIFICATION
+    </div>
+
+    <div class="faceIcon">
+      <span>◎</span>
+    </div>
+
+    <div class="title">
+      FACE ID
+    </div>
+
+    <div class="sub">
+      Face IDで本人認証
+    </div>
+
+    <button
+      id="faceButton"
+      class="primary"
+      onclick="startFaceID()"
+    >
+      Face IDで認証
+    </button>
+
+    <div
+      id="message"
+      class="message"
+    ></div>
+
+  </div>
+
+</section>
+
+
+<!-- ======================
+     ACCESS GRANTED
+====================== -->
+
+<section id="granted" class="screen granted">
+
+  <div class="center">
+
+    <div class="eyebrow">
+      LIFE STATUS SYSTEM
+    </div>
+
+    <div class="logo">
+      LSS
+    </div>
+
+    <div class="check">
+      ✓
+    </div>
+
+    <div class="title">
+      ACCESS GRANTED
+    </div>
+
+    <div class="sub">
+      AUTHENTICATION SUCCESS
+    </div>
+
+    <button
+      class="primary"
+      onclick="showScreen('home')"
+    >
+      LSS HOMEを開く
+    </button>
+
+  </div>
+
+</section>
+
+
+<!-- ======================
+     HOME
+====================== -->
+
+<section id="home" class="screen home">
+
+  <img
+    src="lss-home.jpg"
+    alt="LIFE STATUS SYSTEM HOME"
+  >
+
+</section>
+
+
+<script>
+
+/* =========================
+   SCREEN CHANGE
+========================= */
+
+function showScreen(id){
+
+  document
+    .querySelectorAll(".screen")
+    .forEach(screen=>{
+      screen.classList.remove("active");
+    });
+
+  document
+    .getElementById(id)
+    .classList.add("active");
+}
+
+
+/* =========================
+   BASE64URL
+========================= */
+
+function base64ToBytes(value){
+
+  value=value
+    .replace(/-/g,"+")
+    .replace(/_/g,"/");
+
+  value += "=".repeat(
+    (4-value.length%4)%4
+  );
+
+  return Uint8Array.from(
+    atob(value),
+    c=>c.charCodeAt(0)
+  );
+}
+
+
+function bytesToBase64(buffer){
+
+  return btoa(
+    String.fromCharCode(
+      ...new Uint8Array(buffer)
+    )
+  )
+  .replace(/\+/g,"-")
+  .replace(/\//g,"_")
+  .replace(/=+$/,"");
+}
+
+
+/* =========================
+   API
+========================= */
+
+async function api(path,body={}){
+
+  const response=
+    await fetch(path,{
+      method:"POST",
+
+      headers:{
+        "content-type":
+        "application/json"
+      },
+
+      credentials:
+        "same-origin",
+
+      body:
+        JSON.stringify(body)
+    });
+
+
+  const data=
+    await response
+      .json()
+      .catch(()=>({}));
+
+
+  if(!response.ok){
+
+    const error=
+      new Error(
+        data.error ||
+        "認証処理に失敗しました"
+      );
+
+    error.status=
+      response.status;
+
+    throw error;
+  }
+
+  return data;
+}
+
+
+/* =========================
+   REGISTER JSON
+========================= */
+
+function registrationJSON(c){
+
+  return{
+
+    id:c.id,
+
+    rawId:
+      bytesToBase64(c.rawId),
+
+    type:c.type,
+
+    response:{
+
+      clientDataJSON:
+        bytesToBase64(
+          c.response.clientDataJSON
+        ),
+
+      attestationObject:
+        bytesToBase64(
+          c.response.attestationObject
+        ),
+
+      transports:
+        c.response.getTransports
+        ? c.response.getTransports()
+        : []
+    },
+
+    clientExtensionResults:
+      c.getClientExtensionResults()
+  };
+}
+
+
+/* =========================
+   AUTH JSON
+========================= */
+
+function authenticationJSON(c){
+
+  return{
+
+    id:c.id,
+
+    rawId:
+      bytesToBase64(c.rawId),
+
+    type:c.type,
+
+    response:{
+
+      clientDataJSON:
+        bytesToBase64(
+          c.response.clientDataJSON
+        ),
+
+      authenticatorData:
+        bytesToBase64(
+          c.response.authenticatorData
+        ),
+
+      signature:
+        bytesToBase64(
+          c.response.signature
+        ),
+
+      userHandle:
+        c.response.userHandle
+        ? bytesToBase64(
+            c.response.userHandle
+          )
+        : null
+    },
+
+    clientExtensionResults:
+      c.getClientExtensionResults()
+  };
+}
+
+
+/* =========================
+   REGISTER
+========================= */
+
+async function registerPasskey(){
+
+  const options=
+    await api(
+      "/api/passkey/register/options"
+    );
+
+
+  options.challenge=
+    base64ToBytes(
+      options.challenge
+    );
+
+
+  options.user.id=
+    base64ToBytes(
+      options.user.id
+    );
+
+
+  if(options.excludeCredentials){
+
+    options.excludeCredentials=
+      options.excludeCredentials
+      .map(item=>({
+
+        ...item,
+
+        id:
+          base64ToBytes(
+            item.id
+          )
+
+      }));
+  }
+
+
+  const credential=
+    await navigator
+      .credentials
+      .create({
+
+        publicKey:
+          options
+
+      });
+
+
+  await api(
+    "/api/passkey/register/verify",
+    registrationJSON(
+      credential
+    )
+  );
+}
+
+
+/* =========================
+   LOGIN
+========================= */
+
+async function loginPasskey(){
+
+  const options=
+    await api(
+      "/api/passkey/auth/options"
+    );
+
+
+  options.challenge=
+    base64ToBytes(
+      options.challenge
+    );
+
+
+  if(options.allowCredentials){
+
+    options.allowCredentials=
+      options.allowCredentials
+      .map(item=>({
+
+        ...item,
+
+        id:
+          base64ToBytes(
+            item.id
+          )
+
+      }));
+  }
+
+
+  const credential=
+    await navigator
+      .credentials
+      .get({
+
+        publicKey:
+          options
+
+      });
+
+
+  await api(
+    "/api/passkey/auth/verify",
+    authenticationJSON(
+      credential
+    )
+  );
+}
+
+
+/* =========================
+   FACE ID
+========================= */
+
+async function startFaceID(){
+
+  const message=
+    document.getElementById(
+      "message"
+    );
+
+  const button=
+    document.getElementById(
+      "faceButton"
+    );
+
+
+  if(
+    !window.PublicKeyCredential ||
+    !navigator.credentials
+  ){
+
+    message.textContent=
+      "このブラウザではFace ID認証を利用できません。";
+
+    return;
+  }
+
+
+  button.disabled=true;
+
+  message.textContent=
+    "Face IDを起動しています…";
+
+
+  try{
+
+    try{
+
+      await loginPasskey();
+
+    }
+
+    catch(error){
+
+      /*
+       初回：
+       パスキー未登録なら登録
+      */
+
+      if(error.status!==409){
+        throw error;
+      }
+
+
+      message.textContent=
+        "初回認証を登録しています…";
+
+
+      await registerPasskey();
+
+
+      message.textContent=
+        "Face IDを起動しています…";
+
+
+      await loginPasskey();
+    }
+
+
+    message.textContent=
+      "認証成功 ✓";
+
+
+    setTimeout(()=>{
+
+      showScreen(
+        "granted"
+      );
+
+    },300);
+
+  }
+
+  catch(error){
+
+    console.error(error);
+
+    message.textContent=
+      error.message ||
+      "Face ID認証に失敗しました";
+  }
+
+  finally{
+
+    button.disabled=false;
+  }
+}
+
+</script>
+
+</body>
+</html>

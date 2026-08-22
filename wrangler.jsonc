@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  "name": "lss-system-cloudflare",
+  "main": "worker.js",
+  "compatibility_date": "2026-08-22",
+
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  "kv_namespaces": [
+    {
+      "binding": "LSS_AUTH",
+      "id": "3e2b4b8cffb640a3bc6a853c3c43c2e1"
+    }
+  ]
+}
