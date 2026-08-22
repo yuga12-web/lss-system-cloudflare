@@ -950,6 +950,11 @@ export default {
             request,
             env
           );
+          case "/api/pin/verify":
+  return pinVerify(
+    request,
+    env
+  );
 
         default:
           return json(
