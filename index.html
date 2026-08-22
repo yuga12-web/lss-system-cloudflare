@@ -1130,5 +1130,356 @@ async function startFaceID(){
   -webkit-user-drag:none;
 }
 </style>
+<!-- ===== 6桁コード認証画面 START ===== -->
+
+<style>
+.lss-pin-link{
+  width:100%;
+  margin-top:14px;
+  padding:16px;
+  border:1px solid #315b86;
+  border-radius:20px;
+  background:#081523;
+  color:#b9d8f7;
+  font-size:16px;
+}
+
+.lss-pin-link:active{
+  transform:scale(.98);
+  border-color:#4eb0ff;
+}
+
+.pin-screen{
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      #062c59,
+      #020812 60%,
+      #000
+    );
+}
+
+.pin-box{
+  width:100%;
+  margin:30px 0 16px;
+  padding:18px;
+  border:1px solid #329cff;
+  border-radius:20px;
+  background:#06111f;
+  color:#fff;
+  font-size:34px;
+  font-weight:700;
+  text-align:center;
+  letter-spacing:.45em;
+  outline:none;
+  box-shadow:
+    0 0 22px #087fff44,
+    inset 0 0 18px #087fff22;
+}
+
+.pin-box:focus{
+  border-color:#66d9ff;
+  box-shadow:
+    0 0 28px #168cff88,
+    inset 0 0 18px #087fff33;
+}
+
+.pin-box::placeholder{
+  color:#52677e;
+  letter-spacing:.3em;
+}
+
+.pin-back{
+  width:100%;
+  margin-top:12px;
+  padding:15px;
+  border:0;
+  background:transparent;
+  color:#9fb4d0;
+  font-size:16px;
+}
+
+.pin-message{
+  min-height:26px;
+  margin-top:18px;
+  color:#9fb4d0;
+  line-height:1.5;
+}
+
+.pin-message.error{
+  color:#ff7373;
+}
+
+.pin-message.success{
+  color:#52efb0;
+}
+</style>
+
+
+<section
+  id="pin"
+  class="screen pin-screen"
+>
+  <div class="center">
+
+    <div class="eyebrow">
+      LIFE STATUS SYSTEM
+    </div>
+
+    <div class="logo">
+      LSS
+    </div>
+
+    <div class="state">
+      BACKUP VERIFICATION
+    </div>
+
+    <div class="title">
+      6桁コード
+    </div>
+
+    <div class="sub">
+      登録した6桁のコードを入力してください
+    </div>
+
+    <input
+      id="pinInput"
+      class="pin-box"
+      type="password"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      maxlength="6"
+      autocomplete="one-time-code"
+      placeholder="••••••"
+      aria-label="6桁コード"
+    >
+
+    <button
+      id="pinButton"
+      class="primary"
+      type="button"
+      onclick="submitPin()"
+    >
+      コードで認証
+    </button>
+
+    <button
+      class="pin-back"
+      type="button"
+      onclick="backToFaceID()"
+    >
+      ← Face IDへ戻る
+    </button>
+
+    <div
+      id="pinMessage"
+      class="pin-message"
+    ></div>
+
+  </div>
+</section>
+
+
+<script>
+(function createPinButton(){
+
+  const faceButton =
+    document.getElementById(
+      "faceButton"
+    );
+
+  if(
+    !faceButton ||
+    document.getElementById(
+      "openPinButton"
+    )
+  ){
+    return;
+  }
+
+  const button =
+    document.createElement(
+      "button"
+    );
+
+  button.id =
+    "openPinButton";
+
+  button.type =
+    "button";
+
+  button.className =
+    "lss-pin-link";
+
+  button.textContent =
+    "Face IDが使えない場合";
+
+  button.addEventListener(
+    "click",
+    openPinScreen
+  );
+
+  faceButton.insertAdjacentElement(
+    "afterend",
+    button
+  );
+
+})();
+
+
+function openPinScreen(){
+
+  const input =
+    document.getElementById(
+      "pinInput"
+    );
+
+  const message =
+    document.getElementById(
+      "pinMessage"
+    );
+
+  message.textContent = "";
+  message.className =
+    "pin-message";
+
+  input.value = "";
+
+  showScreen("pin");
+
+  setTimeout(()=>{
+    input.focus();
+  },200);
+}
+
+
+function backToFaceID(){
+
+  const input =
+    document.getElementById(
+      "pinInput"
+    );
+
+  input.value = "";
+
+  showScreen("face");
+}
+
+
+async function submitPin(){
+
+  const input =
+    document.getElementById(
+      "pinInput"
+    );
+
+  const button =
+    document.getElementById(
+      "pinButton"
+    );
+
+  const message =
+    document.getElementById(
+      "pinMessage"
+    );
+
+  const pin =
+    input.value
+      .replace(/\D/g,"")
+      .slice(0,6);
+
+  input.value = pin;
+
+  message.className =
+    "pin-message";
+
+  if(pin.length !== 6){
+
+    message.textContent =
+      "6桁の数字を入力してください";
+
+    message.classList.add(
+      "error"
+    );
+
+    return;
+  }
+
+  button.disabled = true;
+  input.disabled = true;
+
+  message.textContent =
+    "コードを確認しています…";
+
+  try{
+
+    await api(
+      "/api/pin/verify",
+      { pin }
+    );
+
+    message.textContent =
+      "認証成功 ✓";
+
+    message.classList.add(
+      "success"
+    );
+
+    setTimeout(()=>{
+      window.location.reload();
+    },300);
+
+  }
+
+  catch(error){
+
+    message.textContent =
+      error.message ||
+      "コード認証に失敗しました";
+
+    message.classList.add(
+      "error"
+    );
+
+    input.value = "";
+    input.focus();
+  }
+
+  finally{
+
+    button.disabled = false;
+    input.disabled = false;
+  }
+}
+
+
+document
+  .getElementById("pinInput")
+  .addEventListener(
+    "input",
+    event=>{
+
+      event.target.value =
+        event.target.value
+          .replace(/\D/g,"")
+          .slice(0,6);
+    }
+  );
+
+
+document
+  .getElementById("pinInput")
+  .addEventListener(
+    "keydown",
+    event=>{
+
+      if(event.key === "Enter"){
+        submitPin();
+      }
+    }
+  );
+</script>
+
+<!-- ===== 6桁コード認証画面 END ===== -->
 </body>
 </html>
