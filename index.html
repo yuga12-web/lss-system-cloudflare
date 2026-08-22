@@ -739,5 +739,374 @@ async function startFaceID(){
 
 </script>
 
+<!-- ===== LSS ENCYCLOPEDIA START ===== -->
+
+<style>
+/* ホーム画像に重ねる図鑑ボタン */
+#lssEncyclopediaButton{
+  position:absolute;
+  left:60%;
+  top:74%;
+  width:20%;
+  height:15%;
+  z-index:20;
+  border:0;
+  padding:0;
+  background:transparent;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* 図鑑画面 */
+.lss-encyclopedia{
+  width:100%;
+  min-height:100svh;
+  padding:
+    calc(18px + env(safe-area-inset-top))
+    18px
+    calc(32px + env(safe-area-inset-bottom));
+
+  overflow-y:auto;
+
+  background:
+    radial-gradient(
+      circle at 50% 15%,
+      #07376b 0,
+      #031a35 26%,
+      #020812 58%,
+      #000 100%
+    );
+
+  color:#f3f7fb;
+}
+
+.lss-encyclopedia-inner{
+  width:min(100%,620px);
+  margin:auto;
+}
+
+.lss-encyclopedia-header{
+  display:grid;
+  grid-template-columns:52px 1fr 52px;
+  align-items:center;
+  min-height:58px;
+  margin-bottom:24px;
+}
+
+.lss-encyclopedia-back{
+  width:48px;
+  height:48px;
+  border:1px solid #2b6093;
+  border-radius:50%;
+  background:#081523;
+  color:#fff;
+  font-size:30px;
+  line-height:1;
+  box-shadow:0 0 18px #087fff44;
+}
+
+.lss-encyclopedia-heading{
+  margin:0;
+  text-align:center;
+  font-size:24px;
+  letter-spacing:.2em;
+  text-shadow:0 0 14px #168cff;
+}
+
+.lss-encyclopedia-status{
+  width:10px;
+  height:10px;
+  justify-self:center;
+  border-radius:50%;
+  background:#38e6b0;
+  box-shadow:0 0 14px #38e6b0;
+}
+
+.lss-encyclopedia-hero{
+  position:relative;
+  overflow:hidden;
+  margin-bottom:20px;
+  padding:26px 22px;
+  border:1px solid #236cb1;
+  border-radius:24px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #0d2b4d,
+      #071421 62%,
+      #020812
+    );
+
+  box-shadow:
+    0 0 24px #087fff33,
+    inset 0 0 30px #168cff14;
+}
+
+.lss-encyclopedia-hero::after{
+  content:"";
+  position:absolute;
+  width:180px;
+  height:180px;
+  top:-90px;
+  right:-70px;
+  border:1px solid #168cff88;
+  border-radius:50%;
+  box-shadow:
+    0 0 25px #168cff66,
+    inset 0 0 25px #168cff33;
+}
+
+.lss-encyclopedia-label{
+  margin-bottom:8px;
+  color:#66d9ff;
+  font-size:12px;
+  letter-spacing:.35em;
+}
+
+.lss-encyclopedia-title{
+  margin:0 0 10px;
+  font-size:34px;
+  letter-spacing:.1em;
+}
+
+.lss-encyclopedia-description{
+  margin:0;
+  color:#9fb0c3;
+  line-height:1.7;
+}
+
+.lss-encyclopedia-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+.lss-encyclopedia-card{
+  min-height:128px;
+  padding:18px 14px;
+  border:1px solid #274c72;
+  border-radius:20px;
+  background:
+    linear-gradient(
+      155deg,
+      #14263a,
+      #08111d
+    );
+  color:#fff;
+  text-align:left;
+  box-shadow:
+    inset 0 0 22px #168cff0d,
+    0 8px 24px #0005;
+}
+
+.lss-encyclopedia-card:active{
+  transform:scale(.97);
+  border-color:#66d9ff;
+  box-shadow:0 0 20px #168cff66;
+}
+
+.lss-encyclopedia-icon{
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  margin-bottom:14px;
+  border:1px solid #329cff;
+  border-radius:13px;
+  background:#0a3158;
+  color:#70ddff;
+  font-size:21px;
+  box-shadow:0 0 16px #168cff44;
+}
+
+.lss-encyclopedia-card-title{
+  display:block;
+  margin-bottom:5px;
+  font-size:17px;
+  font-weight:800;
+}
+
+.lss-encyclopedia-card-sub{
+  display:block;
+  color:#9fb0c3;
+  font-size:12px;
+  line-height:1.45;
+}
+
+.lss-encyclopedia-footer{
+  margin-top:28px;
+  text-align:center;
+  color:#55ddea;
+  font-size:11px;
+  letter-spacing:.38em;
+}
+
+@media (max-width:360px){
+  .lss-encyclopedia-grid{
+    grid-template-columns:1fr;
+  }
+
+  .lss-encyclopedia-title{
+    font-size:29px;
+  }
+}
+</style>
+
+
+<section id="encyclopedia" class="screen">
+
+  <main class="lss-encyclopedia">
+
+    <div class="lss-encyclopedia-inner">
+
+      <header class="lss-encyclopedia-header">
+
+        <button
+          type="button"
+          class="lss-encyclopedia-back"
+          onclick="showScreen('home')"
+          aria-label="ホームへ戻る"
+        >
+          ‹
+        </button>
+
+        <h1 class="lss-encyclopedia-heading">
+          図鑑
+        </h1>
+
+        <span class="lss-encyclopedia-status"></span>
+
+      </header>
+
+
+      <section class="lss-encyclopedia-hero">
+
+        <div class="lss-encyclopedia-label">
+          LSS ENCYCLOPEDIA
+        </div>
+
+        <h2 class="lss-encyclopedia-title">
+          KNOWLEDGE CORE
+        </h2>
+
+        <p class="lss-encyclopedia-description">
+          LSSに記録された能力・技・領域・称号などを確認できます。
+        </p>
+
+      </section>
+
+
+      <div class="lss-encyclopedia-grid">
+
+        <button type="button" class="lss-encyclopedia-card">
+          <span class="lss-encyclopedia-icon">◇</span>
+          <span class="lss-encyclopedia-card-title">SKILL</span>
+          <span class="lss-encyclopedia-card-sub">能力・スキル一覧</span>
+        </button>
+
+        <button type="button" class="lss-encyclopedia-card">
+          <span class="lss-encyclopedia-icon">✦</span>
+          <span class="lss-encyclopedia-card-title">ARTS</span>
+          <span class="lss-encyclopedia-card-sub">技・術式の記録</span>
+        </button>
+
+        <button type="button" class="lss-encyclopedia-card">
+          <span class="lss-encyclopedia-icon">◎</span>
+          <span class="lss-encyclopedia-card-title">ZONE</span>
+          <span class="lss-encyclopedia-card-sub">領域・環境情報</span>
+        </button>
+
+        <button type="button" class="lss-encyclopedia-card">
+          <span class="lss-encyclopedia-icon">♛</span>
+          <span class="lss-encyclopedia-card-title">称号</span>
+          <span class="lss-encyclopedia-card-sub">獲得した称号</span>
+        </button>
+
+        <button type="button" class="lss-encyclopedia-card">
+          <span class="lss-encyclopedia-icon">R</span>
+          <span class="lss-encyclopedia-card-title">Rank別</span>
+          <span class="lss-encyclopedia-card-sub">ランクから探す</span>
+        </button>
+
+        <button type="button" class="lss-encyclopedia-card">
+          <span class="lss-encyclopedia-icon">⌕</span>
+          <span class="lss-encyclopedia-card-title">語群から探す</span>
+          <span class="lss-encyclopedia-card-sub">キーワード検索</span>
+        </button>
+
+        <button type="button" class="lss-encyclopedia-card">
+          <span class="lss-encyclopedia-icon">↺</span>
+          <span class="lss-encyclopedia-card-title">検索履歴</span>
+          <span class="lss-encyclopedia-card-sub">最近確認した記録</span>
+        </button>
+
+        <button type="button" class="lss-encyclopedia-card">
+          <span class="lss-encyclopedia-icon">•••</span>
+          <span class="lss-encyclopedia-card-title">その他</span>
+          <span class="lss-encyclopedia-card-sub">追加データ</span>
+        </button>
+
+      </div>
+
+
+      <footer class="lss-encyclopedia-footer">
+        LSS IS WITH YOU
+      </footer>
+
+    </div>
+
+  </main>
+
+</section>
+
+
+<script>
+(function(){
+
+  const home=
+    document.getElementById("home");
+
+  if(!home){
+    return;
+  }
+
+  const button=
+    document.createElement("button");
+
+  button.id=
+    "lssEncyclopediaButton";
+
+  button.type=
+    "button";
+
+  button.setAttribute(
+    "aria-label",
+    "図鑑を開く"
+  );
+
+  button.addEventListener(
+    "click",
+    function(){
+
+      showScreen(
+        "encyclopedia"
+      );
+
+      window.scrollTo(
+        0,
+        0
+      );
+    }
+  );
+
+  home.appendChild(
+    button
+  );
+
+})();
+</script>
+
+<!-- ===== LSS ENCYCLOPEDIA END ===== -->
 </body>
 </html>
