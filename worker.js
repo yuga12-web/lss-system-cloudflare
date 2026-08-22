@@ -3,18 +3,25 @@ import {
   verifyRegistrationResponse,
 } from "@simplewebauthn/server";
 
-const json = (data, status = 200) =>
+const json = (
+  data,
+  status = 200,
+  extraHeaders = {}
+) =>
   new Response(JSON.stringify(data), {
     status,
     headers: {
-      "content-type": "application/json; charset=utf-8",
+      "content-type":
+        "application/json; charset=utf-8",
       "cache-control": "no-store",
+      ...extraHeaders,
     },
   });
 
 const b64url = {
   encode(bytes) {
     let value = "";
+
     for (const byte of bytes) {
       value += String.fromCharCode(byte);
     }
@@ -30,28 +37,32 @@ const b64url = {
       .replace(/-/g, "+")
       .replace(/_/g, "/");
 
-    value += "=".repeat((4 - (value.length % 4)) % 4);
+    value += "=".repeat(
+      (4 - (value.length % 4)) % 4
+    );
 
     return Uint8Array.from(
       atob(value),
-      character => character.charCodeAt(0)
+      character =>
+        character.charCodeAt(0)
     );
   },
 };
 
-function createChallenge() {
+function challenge() {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
+
   return b64url.encode(bytes);
 }
 
-const getOrigin = request =>
+const originOf = request =>
   new URL(request.url).origin;
 
-const getRpId = request =>
+const rpIdOf = request =>
   new URL(request.url).hostname;
 
-async function getBody(request) {
+async function bodyOf(request) {
   try {
     return await request.json();
   } catch {
@@ -59,17 +70,175 @@ async function getBody(request) {
   }
 }
 
+function cookieOf(request, name) {
+  const header =
+    request.headers.get("cookie") || "";
+
+  for (const part of header.split(";")) {
+    const [key, ...rest] =
+      part.trim().split("=");
+
+    if (key === name) {
+      return rest.join("=");
+    }
+  }
+
+  return null;
+}
+
 /* ========================================
-   初回登録オプション
+   保護された画面を返す
 ======================================== */
 
-async function registerOptions(request, env) {
+async function serveApp(request, env) {
+  if (!env.ASSETS) {
+    return json({
+      service: "LSS AUTH",
+      status: "ONLINE",
+    });
+  }
+
+  const assetResponse =
+    await env.ASSETS.fetch(request);
+
+  const contentType =
+    assetResponse.headers.get(
+      "content-type"
+    ) || "";
+
+  if (
+    !contentType.includes("text/html")
+  ) {
+    return assetResponse;
+  }
+
+  let html =
+    await assetResponse.text();
+
+  const token =
+    cookieOf(
+      request,
+      "lss_session"
+    );
+
+  const sessionKey =
+    token
+      ? `session:${token}`
+      : null;
+
+  const authenticated =
+    sessionKey
+      ? await env.LSS_AUTH.get(
+          sessionKey
+        )
+      : null;
+
+  const headers =
+    new Headers(
+      assetResponse.headers
+    );
+
+  headers.set(
+    "content-type",
+    "text/html; charset=utf-8"
+  );
+
+  headers.set(
+    "cache-control",
+    "no-store, private"
+  );
+
+  headers.set(
+    "x-content-type-options",
+    "nosniff"
+  );
+
+  headers.set(
+    "x-frame-options",
+    "DENY"
+  );
+
+  headers.set(
+    "referrer-policy",
+    "no-referrer"
+  );
+
+  if (authenticated) {
+    /*
+     認証済みの場合だけ、
+     ホーム画像入りのHTMLを返す。
+    */
+
+    await env.LSS_AUTH.delete(
+      sessionKey
+    );
+
+    headers.set(
+      "set-cookie",
+      [
+        "lss_session=",
+        "Path=/",
+        "HttpOnly",
+        "Secure",
+        "SameSite=Strict",
+        "Max-Age=0",
+      ].join("; ")
+    );
+
+    html = html
+      .replace(
+        '<section id="lock" class="screen lock active">',
+        '<section id="lock" class="screen lock">'
+      )
+      .replace(
+        '<section id="granted" class="screen granted">',
+        '<section id="granted" class="screen granted active">'
+      );
+  } else {
+    /*
+     未認証の場合は、
+     ホーム画像のデータを削除してから返す。
+    */
+
+    html = html.replace(
+      /(<section id="home"[\s\S]*?<img\s+src=")data:image\/jpeg;base64,[^"]+("[\s\S]*?<\/section>)/,
+      "$1$2"
+    );
+
+    /*
+     Face ID成功後に一度だけ再読み込みし、
+     Worker側で認証Cookieを確認する。
+    */
+
+    html = html.replace(
+      /showScreen\(\s*["']granted["']\s*\);/,
+      "window.location.reload();"
+    );
+  }
+
+  return new Response(html, {
+    status: assetResponse.status,
+    headers,
+  });
+}
+
+/* ========================================
+   初回本人登録
+======================================== */
+
+async function registerOptions(
+  request,
+  env
+) {
   /*
-   一度本人登録された後は、
-   他人が新しいパスキーで上書きできないようにする。
+   一度登録されたら、
+   別のパスキーで上書きできない。
   */
+
   const existingCredential =
-    await env.LSS_AUTH.get("credential");
+    await env.LSS_AUTH.get(
+      "credential"
+    );
 
   if (existingCredential) {
     return json(
@@ -82,13 +251,14 @@ async function registerOptions(request, env) {
   }
 
   const currentChallenge =
-    createChallenge();
+    challenge();
 
-  const userId = b64url.encode(
-    crypto.getRandomValues(
-      new Uint8Array(32)
-    )
-  );
+  const userId =
+    b64url.encode(
+      crypto.getRandomValues(
+        new Uint8Array(32)
+      )
+    );
 
   await Promise.all([
     env.LSS_AUTH.put(
@@ -106,27 +276,43 @@ async function registerOptions(request, env) {
   ]);
 
   return json({
-    challenge: currentChallenge,
+    challenge:
+      currentChallenge,
 
     rp: {
-      name: "LIFE STATUS SYSTEM",
-      id: getRpId(request),
+      name:
+        "LIFE STATUS SYSTEM",
+
+      id:
+        rpIdOf(request),
     },
 
     user: {
-      id: userId,
-      name: "lss-owner",
-      displayName: "LSS Owner",
+      id:
+        userId,
+
+      name:
+        "lss-owner",
+
+      displayName:
+        "LSS Owner",
     },
 
     pubKeyCredParams: [
       {
-        type: "public-key",
-        alg: -7,
+        type:
+          "public-key",
+
+        alg:
+          -7,
       },
+
       {
-        type: "public-key",
-        alg: -257,
+        type:
+          "public-key",
+
+        alg:
+          -257,
       },
     ],
 
@@ -144,8 +330,11 @@ async function registerOptions(request, env) {
         "required",
     },
 
-    timeout: 60000,
-    attestation: "none",
+    timeout:
+      60000,
+
+    attestation:
+      "none",
   });
 }
 
@@ -157,12 +346,10 @@ async function registerVerify(
   request,
   env
 ) {
-  /*
-   保存直前にも再確認して、
-   登録済み情報の上書きを防ぐ。
-  */
   const existingCredential =
-    await env.LSS_AUTH.get("credential");
+    await env.LSS_AUTH.get(
+      "credential"
+    );
 
   if (existingCredential) {
     return json(
@@ -175,7 +362,7 @@ async function registerVerify(
   }
 
   const response =
-    await getBody(request);
+    await bodyOf(request);
 
   const expectedChallenge =
     await env.LSS_AUTH.get(
@@ -203,10 +390,10 @@ async function registerVerify(
         expectedChallenge,
 
         expectedOrigin:
-          getOrigin(request),
+          originOf(request),
 
         expectedRPID:
-          getRpId(request),
+          rpIdOf(request),
 
         requireUserVerification:
           true,
@@ -226,7 +413,8 @@ async function registerVerify(
     }
 
     const { credential } =
-      verification.registrationInfo;
+      verification
+        .registrationInfo;
 
     await Promise.all([
       env.LSS_AUTH.put(
@@ -277,10 +465,10 @@ async function registerVerify(
 }
 
 /* ========================================
-   ログインオプション
+   Face IDログイン設定
 ======================================== */
 
-async function authenticationOptions(
+async function authOptions(
   request,
   env
 ) {
@@ -303,7 +491,7 @@ async function authenticationOptions(
     JSON.parse(raw);
 
   const currentChallenge =
-    createChallenge();
+    challenge();
 
   await env.LSS_AUTH.put(
     "auth_challenge",
@@ -318,7 +506,7 @@ async function authenticationOptions(
       currentChallenge,
 
     rpId:
-      getRpId(request),
+      rpIdOf(request),
 
     allowCredentials: [
       {
@@ -346,15 +534,15 @@ async function authenticationOptions(
 }
 
 /* ========================================
-   ログイン署名確認
+   Face ID署名確認
 ======================================== */
 
-async function authenticationVerify(
+async function authVerify(
   request,
   env
 ) {
   const response =
-    await getBody(request);
+    await bodyOf(request);
 
   const [
     expectedChallenge,
@@ -404,10 +592,10 @@ async function authenticationVerify(
         expectedChallenge,
 
         expectedOrigin:
-          getOrigin(request),
+          originOf(request),
 
         expectedRPID:
-          getRpId(request),
+          rpIdOf(request),
 
         requireUserVerification:
           true,
@@ -444,6 +632,14 @@ async function authenticationVerify(
         .authenticationInfo
         .newCounter;
 
+    /*
+     認証後に一度だけ使える
+     サーバー側セッションを発行する。
+    */
+
+    const sessionToken =
+      challenge();
+
     await Promise.all([
       env.LSS_AUTH.put(
         "credential",
@@ -453,12 +649,33 @@ async function authenticationVerify(
       env.LSS_AUTH.delete(
         "auth_challenge"
       ),
+
+      env.LSS_AUTH.put(
+        `session:${sessionToken}`,
+        "verified",
+        {
+          expirationTtl: 120,
+        }
+      ),
     ]);
 
-    return json({
-      ok: true,
-      authenticated: true,
-    });
+    return json(
+      {
+        ok: true,
+        authenticated: true,
+      },
+      200,
+      {
+        "set-cookie": [
+          `lss_session=${sessionToken}`,
+          "Path=/",
+          "HttpOnly",
+          "Secure",
+          "SameSite=Strict",
+          "Max-Age=120",
+        ].join("; "),
+      }
+    );
   } catch (error) {
     console.error(
       "authentication verification failed",
@@ -476,7 +693,7 @@ async function authenticationVerify(
 }
 
 /* ========================================
-   Worker
+   Cloudflare Worker
 ======================================== */
 
 export default {
@@ -484,15 +701,16 @@ export default {
     const url =
       new URL(request.url);
 
+    /*
+     GETの場合は、
+     認証状態に応じた画面を返す。
+    */
+
     if (request.method !== "POST") {
-      return env.ASSETS
-        ? env.ASSETS.fetch(request)
-        : json({
-            service:
-              "LSS AUTH",
-            status:
-              "ONLINE",
-          });
+      return serveApp(
+        request,
+        env
+      );
     }
 
     try {
@@ -510,13 +728,13 @@ export default {
           );
 
         case "/api/passkey/auth/options":
-          return authenticationOptions(
+          return authOptions(
             request,
             env
           );
 
         case "/api/passkey/auth/verify":
-          return authenticationVerify(
+          return authVerify(
             request,
             env
           );
