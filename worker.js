@@ -693,6 +693,218 @@ async function authVerify(
 }
 
 /* ========================================
+   6桁コード認証
+======================================== */
+
+async function pinClientId(request) {
+  const ip =
+    request.headers.get(
+      "CF-Connecting-IP"
+    ) || "unknown";
+
+  const bytes =
+    new TextEncoder().encode(ip);
+
+  const digest =
+    await crypto.subtle.digest(
+      "SHA-256",
+      bytes
+    );
+
+  return b64url.encode(
+    new Uint8Array(digest)
+  );
+}
+
+
+function safePinEqual(input, secret) {
+  if (
+    input.length !== secret.length
+  ) {
+    return false;
+  }
+
+  let difference = 0;
+
+  for (
+    let index = 0;
+    index < input.length;
+    index++
+  ) {
+    difference |=
+      input.charCodeAt(index) ^
+      secret.charCodeAt(index);
+  }
+
+  return difference === 0;
+}
+
+
+async function pinVerify(
+  request,
+  env
+) {
+  /*
+   6桁はGitHubに保存せず、
+   Cloudflare Secretから読み込む。
+  */
+
+  const secret =
+    String(env.LSS_PIN || "")
+      .trim();
+
+  if (!/^\d{6}$/.test(secret)) {
+    return json(
+      {
+        error:
+          "6桁コードがまだ設定されていません",
+      },
+      503
+    );
+  }
+
+  const body =
+    await bodyOf(request);
+
+  const pin =
+    String(body?.pin || "")
+      .replace(/\D/g, "")
+      .slice(0, 6);
+
+  const clientId =
+    await pinClientId(request);
+
+  const failKey =
+    `pin_fail:${clientId}`;
+
+  const lockKey =
+    `pin_lock:${clientId}`;
+
+  const locked =
+    await env.LSS_AUTH.get(
+      lockKey
+    );
+
+  if (locked) {
+    return json(
+      {
+        error:
+          "入力回数が上限に達しました。15分後にもう一度試してください",
+        locked: true,
+        retryAfter: 900,
+      },
+      429
+    );
+  }
+
+  const correct =
+    /^\d{6}$/.test(pin) &&
+    safePinEqual(
+      pin,
+      secret
+    );
+
+  if (!correct) {
+    const previous =
+      Number(
+        await env.LSS_AUTH.get(
+          failKey
+        )
+      ) || 0;
+
+    const failures =
+      previous + 1;
+
+    if (failures >= 5) {
+      await Promise.all([
+        env.LSS_AUTH.put(
+          lockKey,
+          "locked",
+          {
+            expirationTtl: 900,
+          }
+        ),
+
+        env.LSS_AUTH.delete(
+          failKey
+        ),
+      ]);
+
+      return json(
+        {
+          error:
+            "5回間違えたため15分間ロックしました",
+          locked: true,
+          retryAfter: 900,
+        },
+        429
+      );
+    }
+
+    await env.LSS_AUTH.put(
+      failKey,
+      String(failures),
+      {
+        expirationTtl: 900,
+      }
+    );
+
+    return json(
+      {
+        error:
+          `コードが違います。残り${5 - failures}回です`,
+        remaining:
+          5 - failures,
+      },
+      401
+    );
+  }
+
+  await Promise.all([
+    env.LSS_AUTH.delete(
+      failKey
+    ),
+
+    env.LSS_AUTH.delete(
+      lockKey
+    ),
+  ]);
+
+  /*
+   Face IDと同じ一度だけ使える
+   認証セッションを発行する。
+  */
+
+  const sessionToken =
+    challenge();
+
+  await env.LSS_AUTH.put(
+    `session:${sessionToken}`,
+    "verified",
+    {
+      expirationTtl: 120,
+    }
+  );
+
+  return json(
+    {
+      ok: true,
+      authenticated: true,
+    },
+    200,
+    {
+      "set-cookie": [
+        `lss_session=${sessionToken}`,
+        "Path=/",
+        "HttpOnly",
+        "Secure",
+        "SameSite=Strict",
+        "Max-Age=120",
+      ].join("; "),
+    }
+  );
+}
+/* ========================================
    Cloudflare Worker
 ======================================== */
 
