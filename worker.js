@@ -169,21 +169,6 @@ async function serveApp(request, env) {
      ホーム画像入りのHTMLを返す。
     */
 
-    await env.LSS_AUTH.delete(
-      sessionKey
-    );
-
-    headers.set(
-      "set-cookie",
-      [
-        "lss_session=",
-        "Path=/",
-        "HttpOnly",
-        "Secure",
-        "SameSite=Strict",
-        "Max-Age=0",
-      ].join("; ")
-    );
 
     html = html
       .replace(
