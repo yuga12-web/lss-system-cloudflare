@@ -90,6 +90,17 @@ function cookieOf(request, name) {
    保護された画面を返す
 ======================================== */
 
+async function sessionStatus(request, env) {
+  const token = cookieOf(request, "lss_session");
+
+  const authenticated = token
+    ? await env.LSS_AUTH.get(`session:${token}`)
+    : null;
+
+  return json({
+    authenticated: Boolean(authenticated),
+  });
+}
 async function serveApp(request, env) {
   if (!env.ASSETS) {
     return json({
@@ -930,11 +941,17 @@ export default {
             env
           );
 
-        case "/api/passkey/auth/verify":
-          return authVerify(
-            request,
-            env
-          );
+        case "/api/pin/verify":
+  return pinVerify(
+    request,
+    env
+  );
+
+case "/api/session/status":
+  return sessionStatus(
+    request,
+    env
+  );
           case "/api/pin/verify":
   return pinVerify(
     request,
