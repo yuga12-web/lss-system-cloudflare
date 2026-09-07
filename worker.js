@@ -940,6 +940,11 @@ export default {
             request,
             env
           );
+          case "/api/passkey/auth/verify":
+  return authVerify(
+    request,
+    env
+  );
 
         case "/api/pin/verify":
   return pinVerify(
