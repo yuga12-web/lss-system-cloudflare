@@ -1425,11 +1425,30 @@ async function submitPin(){
       "success"
     );
 
-await new Promise(resolve => {
-  setTimeout(resolve, 1500);
-});
+for (let attempt = 0; attempt < 40; attempt++) {
+  const response = await fetch("/api/session/status", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store"
+  });
 
-window.location.reload();
+  const data = await response
+    .json()
+    .catch(() => ({}));
+
+  if (response.ok && data.authenticated) {
+    window.location.reload();
+    return;
+  }
+
+  await new Promise(resolve => {
+    setTimeout(resolve, 500);
+  });
+}
+
+throw new Error(
+  "認証情報の反映に時間がかかっています"
+);
 
   }
 
