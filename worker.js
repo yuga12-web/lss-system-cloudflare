@@ -952,10 +952,6 @@ case "/api/session/status":
     request,
     env
   );
-  return pinVerify(
-    request,
-    env
-  );
 
         default:
           return json(
