@@ -973,6 +973,11 @@ case "/api/session/status":
     request,
     env
   );
+case "/api/logout":
+  return logout(
+    request,
+    env
+  );
 
         default:
           return json(
