@@ -1499,6 +1499,25 @@ document
       }
     }
   );
+  document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "hidden") {
+    return;
+  }
+
+  const granted =
+    document.getElementById("granted");
+
+  const home =
+    document.getElementById("home");
+
+  const authenticatedScreenIsOpen =
+    granted?.classList.contains("active") ||
+    home?.classList.contains("active");
+
+  if (authenticatedScreenIsOpen) {
+    navigator.sendBeacon("/api/logout");
+  }
+});
 </script>
 
 <!-- ===== 6桁コード認証画面 END ===== -->
