@@ -101,6 +101,22 @@ async function sessionStatus(request, env) {
     authenticated: Boolean(authenticated),
   });
 }
+async function logout(request, env) {
+  const token = cookieOf(request, "lss_session");
+
+  if (token) {
+    await env.LSS_AUTH.delete(`session:${token}`);
+  }
+
+  return json(
+    { ok: true },
+    200,
+    {
+      "set-cookie":
+        "lss_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0",
+    }
+  );
+}
 async function serveApp(request, env) {
   if (!env.ASSETS) {
     return json({
